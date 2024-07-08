@@ -39,7 +39,7 @@ class BasicAuth(Auth):
                     validate=True,
                 )
                 return res.decode('utf-8')
-            except binascii.Error:
+            except (binascii.Error, UnicodeDecodeError):
                 return None
 
     def extract_user_credentials(
@@ -68,14 +68,15 @@ class BasicAuth(Auth):
         """Retrieves a user based on the user's authentication credentials.
         """
         if type(user_email) == str and type(user_pwd) == str:
-            if User.count() <= 0:
+            try:
+                users = User.search({'email': user_email})
+            except Exception:
                 return None
-            users = User.search({'email': user_email})
             if len(users) <= 0:
                 return None
-            for user in users:
-                if user.is_valid_password(user_pwd):
-                    return user
+            if users[0].is_valid_password(user_pwd):
+                return users[0]
+        return None
 
     def current_user(self, request=None) -> TypeVar('User'):
         """Retrieves the user from a request.
