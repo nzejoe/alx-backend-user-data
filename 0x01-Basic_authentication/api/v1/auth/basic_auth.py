@@ -4,9 +4,10 @@
 import re
 import base64
 import binascii
-from typing import Tuple
+from typing import Tuple, TypeVar
 
 from .auth import Auth
+from models.user import User
 
 
 class BasicAuth(Auth):
@@ -22,7 +23,7 @@ class BasicAuth(Auth):
             pattern = r'Basic (?P<token>.+)'
             field_match = re.fullmatch(pattern, authorization_header.strip())
             if field_match is not None:
-                return field_match.groups('token')[0]
+                return field_match.group('token')
         return None
 
     def decode_base64_authorization_header(
@@ -59,3 +60,19 @@ class BasicAuth(Auth):
                 password = field_match.group('password')
                 return user, password
         return None, None
+
+    def user_object_from_credentials(
+            self,
+            user_email: str,
+            user_pwd: str) -> TypeVar('User'):
+        """Retrieves a user based on the user's authentication credentials.
+        """
+        if type(user_email) == str and type(user_pwd) == str:
+            if User.count() <= 0:
+                return None
+            users = User.search({'email': user_email})
+            if len(users) <= 0:
+                return None
+            for user in users:
+                if user.is_valid_password(user_pwd):
+                    return user
